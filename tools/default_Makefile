@@ -1,0 +1,55 @@
+#!/usr/bin/make
+##################################################
+# DO NOT MODIFY THIS FILE !!!!
+# This files must be copied in every sub-folder
+# of src for thing to work correctly
+##################################################
+# Expect ROOTDIR to be passed as environnement variable if
+# not provided it work but only in git repository
+# Expect BUILDDIR if built elsewhere than the default build path
+ROOTDIR  ?= $(shell git rev-parse --show-toplevel)
+include $(ROOTDIR)/directory.mk
+include $(ROOTDIR)/compile.mk
+
+THISDIR := $(realpath .)
+
+##################################################
+# Generated object recursively
+##################################################
+SUBMODULES = $(shell $(RECURSIVE_PARSING))
+HSRCS := $(realpath $(wildcard *.h))
+CSRCS := $(realpath $(wildcard *.c))
+SMINSRCS := $(realpath $(wildcard *.s))
+SMAJSRCS := $(realpath $(wildcard *.S))
+
+OBJS  = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(CSRCS))
+OBJS += $(patsubst $(SRCDIR)/%.s, $(OBJDIR)/%.o, $(SMINSRCS))
+OBJS += $(patsubst $(SRCDIR)/%.S, $(OBJDIR)/%.o, $(SMAJSRCS))
+APIS = $(patsubst $(SRCDIR)/%.h, $(INCDIR)/%.h, $(filter-out %_r.h, $(HSRCS))) # Only consider not _r.h files as C API
+DEPS = $(patsubst $(OBJDIR)/%.o, $(DEPDIR)/%.d, $(OBJS))
+
+##################################################
+# Sub-module rules to build
+##################################################
+BUILD_MODULES = $(patsubst %, $(THISDIR)/%, $(SUBMODULES))
+CLEAN_MODULES = $(patsubst $(THISDIR)/%, .clean_%, $(BUILD_MODULES))
+
+.PHONY: $(BUILD_MODULES)
+$(BUILD_MODULES):
+	@-$(MAKE) -i -C $@ ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) all
+
+.PHONY: all
+all: $(OBJS) $(APIS) $(BUILD_MODULES)
+
+.PHONY: $(CLEAN_MODULES)
+$(CLEAN_MODULES):
+	@-$(MAKE) -i -C $(patsubst .clean_%, $(THISDIR)/%, $@) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) clean
+
+.PHONY: clean
+clean: $(CLEAN_MODULES)
+	@-$(RM) $(OBJS) $(APIS) $(DEPS)
+
+##############################################
+# Include Dependencies
+##############################################
+-include $(DEPS)
