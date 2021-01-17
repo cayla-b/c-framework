@@ -57,7 +57,7 @@ help:
 	@$(ECHO) "        clean     : Remove all make generated artifact"
 	@$(ECHO) "        distclean : Remove all generated files (e.g. pre-make files)"
 	@$(ECHO) "        help      : Display this message"
-	@$(ECHO) "        tools_ver : "
+	@$(ECHO) "        tools_ver : Display tool version"
 	@$(ECHO)
 	@$(ECHO) "=== Available options =========================================================="
 	@$(ECHO) "        ROOTDIR   : Path to this makefile"
@@ -73,6 +73,9 @@ tools_ver:
 	@$(ECHO) "=== Tools version =============================================================="
 	@$(ECHO) "Make version"
 	@$(MAKE) --version
+	@$(ECHO)
+	@$(ECHO) "Python version"
+	@python --version
 	@$(ECHO)
 	@$(ECHO) "Compiler version"
 	@$(CC) --version
