@@ -7,7 +7,7 @@
 #  - BUILDDIR: The directory where files are generated #
 ########################################################
 # Rules to make object
-ROOTDIR  ?= $(shell git rev-parse --show-toplevel || echo '$(realpath .)')
+ROOTDIR  ?= $(shell git rev-parse --show-toplevel 2> /dev/null || echo '$(realpath .)')
 include $(ROOTDIR)/directory.mk
 include $(ROOTDIR)/compile.mk
 
@@ -17,13 +17,11 @@ include $(ROOTDIR)/compile.mk
 .PHONY: all
 all:
 all: bin test
-	@$(ECHO) Package component
 
 .PHONY: bin
 bin:
-	@-$(MAKE) -C $(SRCDIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) all
-	@-$(RM) $(BINDIR)/$(TARGETNAME)
-	@-$(MAKE) $(BINDIR)/$(TARGETNAME)
+	@$(MAKE) -C $(SRCDIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) all
+	@$(MAKE) $(BINDIR)/$(TARGETNAME)
 
 .PHONY: test
 test:
@@ -36,7 +34,7 @@ test:
 clean:
 	@-$(MAKE) -C $(SRCDIR)   ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) clean
 	@-$(MAKE) -C $(TESTSDIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) clean
-	@-$(RM) $(BINDIR)/$(TARGETNAME)
+	@-$(RM) -r $(BINDIR)/*
 
 .PHONY: distclean
 distclean:

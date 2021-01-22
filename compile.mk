@@ -1,5 +1,5 @@
 #!/usr/bin/make
-ROOTDIR  ?= $(shell git rev-parse --show-toplevel)
+ROOTDIR  ?= $(shell git rev-parse --show-toplevel 2> /dev/null)
 include $(ROOTDIR)/directory.mk
 include $(ROOTDIR)/config.mk
 

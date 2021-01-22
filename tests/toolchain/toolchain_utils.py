@@ -79,8 +79,12 @@ class TestCFrameworkToolchainTestCase(unittest.TestCase):
         configh_path          = os.path.join(self.tempSrcDir, "config.h")
         shutil.copy2(default_configmk_path, configmk_path)
         shutil.copy2(default_configh_path, configh_path)
+
+        # Create another temporary directory for the build
+        self.anotherTempDir = tempfile.TemporaryDirectory(prefix="test_toolchain_")
         
 
     def tearDown(self):
         """ Delete the temporary folder """
         self.tempDir.cleanup()
+        self.anotherTempDir.cleanup()
