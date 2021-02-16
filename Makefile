@@ -39,7 +39,8 @@ clean:
 .PHONY: distclean
 distclean:
 	@-$(RM) -r $(BUILDDIR)
-	@$(ECHO) Remove config.mk and config.h
+	@-$(RM) $(ROOTDIR)/config.mk
+	@-$(RM) $(SRCDIR)/config.h
 
 ########################################################
 # PHONY help rules
