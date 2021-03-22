@@ -107,6 +107,8 @@ UNIT_TESTS_MOCKS_H     = $(patsubst %.c,%.h,$(UNIT_TESTS_MOCKS_C))
 UNIT_TESTS_MOCKS_OBJS  = $(patsubst %.c,%.o,$(UNIT_TESTS_MOCKS_C))
 UNIT_TESTS_BIN         = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_BIN_DIR)/%,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_RESULTS     = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RES_DIR)/%.testresults,$(UNIT_TESTS_SCENAR))
+UNIT_TESTS_GCNO        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_COV_DIR)/%.gcno,$(UNIT_TESTED_OBJS)))
+UNIT_TESTS_GCDA        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_COV_DIR)/%.gcda,$(UNIT_TESTED_OBJS)))
 
 # Build compiler flags
 CFLAGS  = $(CONAN_CFLAGS)
@@ -155,7 +157,7 @@ doc: $(SOURCE_DIR)/Doxyfile $(SRCS) $(HDRS)
 	@$(MV) ./doc $(DOC_DIR)
 
 .PHONY: test
-test: $(UNIT_TESTS_RESULTS)
+test: $(UNIT_TESTS_RESULTS) $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA)
 	@ruby $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR) $(SOURCE_DIR)
 
 ########################################################
@@ -209,7 +211,6 @@ $(UNIT_TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
 
 $(UNIT_TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	@$(MKDIR) $(UNIT_TEST_COV_DIR)
 	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_OBJ_CFLAGS) $< -o $@
 
@@ -220,6 +221,11 @@ $(UNITY_DIR)/src/unity.o: $(UNITY_DIR)/src/unity.c
 $(CMOCK_DIR)/src/cmock.o: $(CMOCK_DIR)/src/cmock.c
 	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
+
+$(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $($(UNIT_TESTS_RESULTS))
+	@$(MKDIR) $(dir $@)
+	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcno,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
+	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcda,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
 
 ########################################################
 # Rules dedicated to build unitary test (ut_<module_name>*.c)
