@@ -13,5 +13,6 @@ void tearDown(void)
 
 void test_function1(void)
 {
+    greetings();
     TEST_PASS_MESSAGE("Ca marche, je suis trop content !");
 }
