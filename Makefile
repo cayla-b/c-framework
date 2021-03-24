@@ -102,9 +102,9 @@ UNIT_TESTS_ASSET       = $(filter-out $(UNIT_TESTS_SCENAR),$(shell $(FIND) $(UNI
 UNIT_TESTS_ASSET_OBJS  = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TESTS_ASSET))
 UNIT_TESTS_RUNNER      = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RUNNER_DIR)/%_Runner.c,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_RUNNER_OBJS = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RUNNER_DIR)/%_Runner.o,$(UNIT_TESTS_SCENAR))
-UNIT_TESTS_MOCKS_C     = $(foreach dirs,$(patsubst %/,%,$(sort $(dir $(HDRS)))),$(patsubst $(dirs)/%.h,$(UNIT_TEST_MOCK_DIR)/Mock%.c,$(HDRS)))
-UNIT_TESTS_MOCKS_H     = $(patsubst %.c,%.h,$(UNIT_TESTS_MOCKS_C))
-UNIT_TESTS_MOCKS_OBJS  = $(patsubst %.c,%.o,$(UNIT_TESTS_MOCKS_C))
+UNIT_TESTS_MOCKS_H     = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.h,$(notdir $(HDRS)))
+UNIT_TESTS_MOCKS_C     = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.c,$(notdir $(HDRS)))
+UNIT_TESTS_MOCKS_OBJS  = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.o,$(notdir $(HDRS)))
 UNIT_TESTS_BIN         = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_BIN_DIR)/%,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_RESULTS     = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RES_DIR)/%.testresults,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_GCNO        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_COV_DIR)/%.gcno,$(UNIT_TESTED_OBJS)))
@@ -158,7 +158,7 @@ doc: $(SOURCE_DIR)/Doxyfile $(SRCS) $(HDRS)
 
 .PHONY: test
 test: $(UNIT_TESTS_RESULTS) $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA)
-	@ruby $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR) $(SOURCE_DIR)
+	@ruby $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR)/
 
 ########################################################
 # Rules to build the target
@@ -193,11 +193,10 @@ $(DEP_DIR)/%.d: $(SRC_DIR)/%.c
 ########################################################
 $(UNIT_TEST_RES_DIR)/%.testresults: $(UNIT_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
-	@$< > $@
+	-@$< > $@
 
 $(UNIT_TEST_RUNNER_DIR)/%_Runner.o: $(UNIT_TEST_RUNNER_DIR)/%_Runner.c
 	@$(MKDIR) $(dir $@)
-	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TEST_RUNNER_DIR)/%_Runner.c: $(UNIT_TEST_SRC_DIR)/%.c
@@ -206,23 +205,21 @@ $(UNIT_TEST_RUNNER_DIR)/%_Runner.c: $(UNIT_TEST_SRC_DIR)/%.c
 
 $(UNIT_TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_OBJ_CFLAGS) $< -o $@
 
-$(UNITY_DIR)/src/unity.o: $(UNITY_DIR)/src/unity.c
-	@$(ECHO) CC $(notdir $@)
+$(UNIT_TEST_OBJ_DIR)/unity.o: $(UNITY_DIR)/src/unity.c
+	@$(MKDIR) $(dir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
-$(CMOCK_DIR)/src/cmock.o: $(CMOCK_DIR)/src/cmock.c
-	@$(ECHO) CC $(notdir $@)
+$(UNIT_TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
+	@$(MKDIR) $(dir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
-$(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $($(UNIT_TESTS_RESULTS))
+$(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $(UNIT_TESTS_RESULTS)
 	@$(MKDIR) $(dir $@)
 	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcno,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
 	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcda,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
@@ -231,23 +228,26 @@ $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $($(UNIT_TESTS_RESULT
 # Rules dedicated to build unitary test (ut_<module_name>*.c)
 ########################################################
 define UNIT_TEST_generate =
-$(UNIT_TEST_BIN_DIR)/ut_$(1)%:$(UNIT_TEST_RUNNER_DIR)/ut_$(1)%_Runner.o \
-						 $(UNIT_TEST_OBJ_DIR)/ut_$(1)%.o \
+$(UNIT_TEST_BIN_DIR)$(1)ut_$(2)%:$(UNIT_TEST_RUNNER_DIR)$(1)ut_$(2)%_Runner.o \
+						 $(UNIT_TEST_OBJ_DIR)$(1)ut_$(2)%.o \
 						 $(UNIT_TESTS_ASSET_OBJS) \
-						 $(filter %$(1).o,$(UNIT_TESTED_OBJS)) \
+						 $(filter %$(2).o,$(UNIT_TESTED_OBJS)) \
 						 $(UNIT_TESTS_MOCKS_OBJS) \
-						 $(UNITY_DIR)/src/unity.o \
-						 $(CMOCK_DIR)/src/cmock.o
+						 $(UNIT_TEST_OBJ_DIR)/unity.o \
+						 $(UNIT_TEST_OBJ_DIR)/cmock.o
 	@$(MKDIR) $$(dir $$@)
-	@$(ECHO) LD $$(notdir $$@)
 	$(V)$(HOST_CC) $(UNIT_TEST_LDFLAGS) $$^ -o $$@
 endef
-MODULE_TO_TEST=$(basename $(notdir $(UNIT_TESTED_OBJS)))
-$(foreach module,$(MODULE_TO_TEST),$(eval $(call UNIT_TEST_generate,$(module))))
+MODULE_TO_TEST:=$(basename $(notdir $(UNIT_TESTED_OBJS)))
+REL_PATH_TO_MODULE:=$(subst $(UNIT_TEST_BIN_DIR),,$(dir $(UNIT_TESTS_BIN)))
+$(foreach rel_path,$(REL_PATH_TO_MODULE),\
+	$(foreach module,$(MODULE_TO_TEST),\
+		$(eval $(call UNIT_TEST_generate,$(rel_path),$(module)))\
+	)\
+)
 
-$(UNIT_TEST_MOCK_DIR)/Mock%.o: $(UNIT_TEST_MOCK_DIR)/Mock%.c $(UNIT_TEST_MOCK_DIR)/Mock%.h
+$(UNIT_TEST_MOCK_DIR)/%.o: $(UNIT_TEST_MOCK_DIR)/%.c $(UNIT_TEST_MOCK_DIR)/%.h
 	@$(MKDIR) $(dir $@)
-	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H): $(HDRS)
@@ -258,12 +258,16 @@ $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H): $(HDRS)
 ########################################################
 # PHONY clean rules
 ########################################################
-.PRECIOUS: $(PRES) $(OBJS) $(DEPS) $(UNIT_TESTS_BIN) $(UNIT_TESTS_RUNNER) $(UNIT_TESTS_RUNNER_OBJS) $(UNIT_TESTS_ASSET_OBJS) $(UNIT_TESTS_SCENAR_OBJS) $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H) $(UNIT_TESTS_MOCKS_OBJS) $(UNIT_TESTED_OBJS)
+.PRECIOUS:  $(PRES) $(OBJS) $(DEPS) \
+			$(UNIT_TESTS_BIN) $(UNIT_TESTS_RUNNER) $(UNIT_TESTS_RUNNER_OBJS) \
+			$(UNIT_TESTS_ASSET_OBJS) $(UNIT_TESTS_SCENAR_OBJS) $(UNIT_TESTS_MOCKS_C) \
+			$(UNIT_TESTS_MOCKS_H) $(UNIT_TESTS_MOCKS_OBJS) $(UNIT_TESTED_OBJS)
 .PHONY: clean
 clean:
 	-$(V)$(RM) --preserve-root -rf $(BIN_DIR)/* \
 			   $(OBJ_DIR)/* $(PRE_DIR)/* $(DEP_DIR)/* $(DOC_DIR)/* \
-			   $(UNIT_TEST_BIN_DIR)/* $(UNIT_TEST_OBJ_DIR)/* $(UNIT_TEST_RUNNER_DIR)/* $(UNIT_TEST_MOCK_DIR)/* $(UNIT_TEST_RES_DIR)/* $(UNIT_TEST_COV_DIR)/*
+			   $(UNIT_TEST_BIN_DIR)/* $(UNIT_TEST_OBJ_DIR)/* $(UNIT_TEST_RUNNER_DIR)/* $(UNIT_TEST_MOCK_DIR)/* \
+			   $(UNIT_TEST_RES_DIR)/* $(UNIT_TEST_COV_DIR)/*
 
 .PHONY: distclean
 distclean: clean
