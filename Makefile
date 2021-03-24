@@ -77,19 +77,29 @@ DEP_DIR           = $(GENERATION_DIR)/dep
 DOC_DIR           = $(GENERATION_DIR)/doc
 TEST_BUILD_DIR    = $(GENERATION_DIR)/tests
 
+# Test generation folder
+TEST_OBJ_DIR      = $(TEST_BUILD_DIR)/obj
+TEST_COV_DIR      = $(TEST_BUILD_DIR)/cov
+
 # Unit test generation folder
 UNIT_TEST_BUILD_DIR    = $(TEST_BUILD_DIR)/unit
 UNIT_TEST_BIN_DIR      = $(UNIT_TEST_BUILD_DIR)/bin
-UNIT_TEST_OBJ_DIR      = $(UNIT_TEST_BUILD_DIR)/obj
 UNIT_TEST_RUNNER_DIR   = $(UNIT_TEST_BUILD_DIR)/runner
 UNIT_TEST_MOCK_DIR     = $(UNIT_TEST_BUILD_DIR)/mocks
 UNIT_TEST_RES_DIR      = $(UNIT_TEST_BUILD_DIR)/results
-UNIT_TEST_COV_DIR      = $(UNIT_TEST_BUILD_DIR)/cov
+
+# Integration test generation folder
+INTEGRATION_TEST_BUILD_DIR    = $(TEST_BUILD_DIR)/integration
+INTEGRATION_TEST_BIN_DIR      = $(INTEGRATION_TEST_BUILD_DIR)/bin
+INTEGRATION_TEST_RUNNER_DIR   = $(INTEGRATION_TEST_BUILD_DIR)/runner
+INTEGRATION_TEST_MOCK_DIR     = $(INTEGRATION_TEST_BUILD_DIR)/mocks
+INTEGRATION_TEST_RES_DIR      = $(INTEGRATION_TEST_BUILD_DIR)/results
 
 # Source Dir
 SRC_DIR           = $(SOURCE_DIR)/src
 TEST_SRC_DIR      = $(SOURCE_DIR)/tests
 UNIT_TEST_SRC_DIR = $(TEST_SRC_DIR)/unit
+INTEGRATION_TEST_SRC_DIR = $(TEST_SRC_DIR)/integration
 TOOLS_DIR         = $(SOURCE_DIR)/tools
 
 # Sources files
@@ -101,12 +111,16 @@ PRES        = $(patsubst $(SRC_DIR)/%.c,$(PRE_DIR)/%.i,$(SRCS))
 DEPS        = $(patsubst $(SRC_DIR)/%.c,$(DEP_DIR)/%.d,$(SRCS))
 OBJS        = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 
+# Overal tests files
+TESTED_OBJS       = $(patsubst $(SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(SRCS))
+TESTS_GCNO        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(TEST_OBJ_DIR)/%.o,$(TEST_COV_DIR)/%.gcno,$(TESTED_OBJS)))
+TESTS_GCDA        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(TEST_OBJ_DIR)/%.o,$(TEST_COV_DIR)/%.gcda,$(TESTED_OBJS)))
+
 # Unit tests files
-UNIT_TESTED_OBJS       = $(patsubst $(SRC_DIR)/%.c,$(UNIT_TEST_OBJ_DIR)/%.o,$(SRCS))
 UNIT_TESTS_SCENAR      = $(shell $(FIND) $(UNIT_TEST_SRC_DIR) -name "ut_*.c")
-UNIT_TESTS_SCENAR_OBJS = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TESTS_SCENAR))
+UNIT_TESTS_SCENAR_OBJS = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_ASSET       = $(filter-out $(UNIT_TESTS_SCENAR),$(shell $(FIND) $(UNIT_TEST_SRC_DIR) -name "*.c"))
-UNIT_TESTS_ASSET_OBJS  = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TESTS_ASSET))
+UNIT_TESTS_ASSET_OBJS  = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(UNIT_TESTS_ASSET))
 UNIT_TESTS_RUNNER      = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RUNNER_DIR)/%_Runner.c,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_RUNNER_OBJS = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RUNNER_DIR)/%_Runner.o,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_MOCKS_H     = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.h,$(notdir $(HDRS)))
@@ -114,8 +128,19 @@ UNIT_TESTS_MOCKS_C     = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.c,$(notdir $
 UNIT_TESTS_MOCKS_OBJS  = $(patsubst %.h,$(UNIT_TEST_MOCK_DIR)/Mock%.o,$(notdir $(HDRS)))
 UNIT_TESTS_BIN         = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_BIN_DIR)/%,$(UNIT_TESTS_SCENAR))
 UNIT_TESTS_RESULTS     = $(patsubst $(UNIT_TEST_SRC_DIR)/%.c,$(UNIT_TEST_RES_DIR)/%.testresults,$(UNIT_TESTS_SCENAR))
-UNIT_TESTS_GCNO        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_COV_DIR)/%.gcno,$(UNIT_TESTED_OBJS)))
-UNIT_TESTS_GCDA        = $(if $(filter 1,$(COVERAGE)),$(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_COV_DIR)/%.gcda,$(UNIT_TESTED_OBJS)))
+
+# Integration tests files
+INTEGRATION_TESTS_SCENAR      = $(shell $(FIND) $(INTEGRATION_TEST_SRC_DIR) -name "it_*.c")
+INTEGRATION_TESTS_SCENAR_OBJS = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(INTEGRATION_TESTS_SCENAR))
+INTEGRATION_TESTS_ASSET       = $(filter-out $(INTEGRATION_TESTS_SCENAR),$(shell $(FIND) $(INTEGRATION_TEST_SRC_DIR) -name "*.c"))
+INTEGRATION_TESTS_ASSET_OBJS  = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(INTEGRATION_TESTS_ASSET))
+INTEGRATION_TESTS_RUNNER      = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.c,$(INTEGRATION_TESTS_SCENAR))
+INTEGRATION_TESTS_RUNNER_OBJS = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.o,$(INTEGRATION_TESTS_SCENAR))
+INTEGRATION_TESTS_MOCKS_H     = $(patsubst %.h,$(INTEGRATION_TEST_MOCK_DIR)/Mock%.h,$(notdir $(HDRS)))
+INTEGRATION_TESTS_MOCKS_C     = $(patsubst %.h,$(INTEGRATION_TEST_MOCK_DIR)/Mock%.c,$(notdir $(HDRS)))
+INTEGRATION_TESTS_MOCKS_OBJS  = $(patsubst %.h,$(INTEGRATION_TEST_MOCK_DIR)/Mock%.o,$(notdir $(HDRS)))
+INTEGRATION_TESTS_BIN         = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(INTEGRATION_TEST_BIN_DIR)/%,$(INTEGRATION_TESTS_SCENAR))
+INTEGRATION_TESTS_RESULTS     = $(patsubst $(INTEGRATION_TEST_SRC_DIR)/%.c,$(INTEGRATION_TEST_RES_DIR)/%.testresults,$(INTEGRATION_TESTS_SCENAR))
 
 # Build compiler flags
 CFLAGS  = $(CONAN_CFLAGS)
@@ -137,14 +162,27 @@ COVERAGE_CFLAGS=
 COVERAGE_LDFLAGS=
 endif
 
+# Overall test compiler flag
+TEST_CFLAGS  = $(CFLAGS)
+TEST_CFLAGS += -DTEST -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src
+OBJ_CFLAGS   = $(CFLAGS)
+OBJ_CFLAGS  += -DTEST $(COVERAGE_CFLAGS)
+
+# Overall test linker flag
+TEST_LDFLAGS = $(COVERAGE_LDFLAGS)
+
 # Unit test compiler flags
-UNIT_TEST_CFLAGS  = $(CFLAGS)
-UNIT_TEST_CFLAGS += -DTEST -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src
-UNIT_OBJ_CFLAGS   = $(UNIT_TEST_CFLAGS)
-UNIT_OBJ_CFLAGS  += $(COVERAGE_CFLAGS)
+UNIT_TEST_CFLAGS  = $(TEST_CFLAGS)
 
 # Unit test linker flags
-UNIT_TEST_LDFLAGS = $(COVERAGE_LDFLAGS)
+UNIT_TEST_LDFLAGS = $(TEST_LDFLAGS)
+
+# Integration test compiler flags
+INTEGRATION_TEST_CFLAGS  = $(TEST_CFLAGS)
+
+# Unit test linker flags
+INTEGRATION_TEST_LDFLAGS  = $(TEST_LDFLAGS)
+INTEGRATION_TEST_LDFLAGS += $(LDFLAGS)
 
 ########################################################
 # PHONY build rules
@@ -164,9 +202,10 @@ doc: $(SOURCE_DIR)/Doxyfile $(SRCS) $(HDRS)
 	@$(MV) ./doc $(DOC_DIR)
 
 .PHONY: test
-test: $(UNIT_TESTS_RESULTS) $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA)
+test: $(UNIT_TESTS_RESULTS) $(INTEGRATION_TESTS_RESULTS) $(TESTS_GCNO) $(TESTS_GCDA)
 	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR)/
-	@$(if $(filter 1,$(COVERAGE)),$(TARGET_GCOV) -n $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA) 2> /dev/null)
+	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(INTEGRATION_TEST_RES_DIR)/
+	@$(if $(filter 1,$(COVERAGE)),$(TARGET_GCOV) -n $(TESTS_GCNO) $(TESTS_GCDA) 2> /dev/null)
 
 ########################################################
 # Rules to build the target
@@ -197,7 +236,26 @@ $(DEP_DIR)/%.d: $(SRC_DIR)/%.c
 	$(V)$(TARGET_CC) $(CFLAGS) -MT $(patsubst $(DEP_DIR)/%.d,$(OBJ_DIR)/%.o,$@) -MM -MF $@ $<
 
 ########################################################
-# Rules to build unit test tests
+# Rules to build all tests
+########################################################
+$(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(OBJ_CFLAGS) $< -o $@
+
+$(TEST_OBJ_DIR)/unity.o: $(UNITY_DIR)/src/unity.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(TEST_CFLAGS) $< -o $@
+
+$(TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(TEST_CFLAGS) $< -o $@
+
+$(TESTS_GCNO) $(TESTS_GCDA): $(TESTED_OBJS) $(UNIT_TESTS_RESULTS) $(INTEGRATION_TESTS_RESULTS)
+	@$(MKDIR) $(dir $@)
+	-@$(MV) -f $(patsubst $(TEST_COV_DIR)/%,$(TEST_OBJ_DIR)/%,$@) $@ 2> /dev/null | true
+
+########################################################
+# Rules to build unit tests (ut_<module_name>*.c)
 ########################################################
 $(UNIT_TEST_RES_DIR)/%.testresults: $(UNIT_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
@@ -211,44 +269,25 @@ $(UNIT_TEST_RUNNER_DIR)/%_Runner.c: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
 	$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
 
-$(UNIT_TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
+$(TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
-$(UNIT_TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(UNIT_OBJ_CFLAGS) $< -o $@
-
-$(UNIT_TEST_OBJ_DIR)/unity.o: $(UNITY_DIR)/src/unity.c
-	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
-
-$(UNIT_TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
-	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
-
-$(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $(UNIT_TESTS_RESULTS)
-	@$(MKDIR) $(dir $@)
-	-@$(MV) -f $(patsubst $(UNIT_TEST_COV_DIR)/%,$(UNIT_TEST_OBJ_DIR)/%,$@) $@ 2> /dev/null | true
-
-########################################################
-# Rules dedicated to build unitary test (ut_<module_name>*.c)
-########################################################
 define UNIT_TEST_generate =
 $(UNIT_TEST_BIN_DIR)$(1)ut_$(2)%:$(UNIT_TEST_RUNNER_DIR)$(1)ut_$(2)%_Runner.o \
-						 $(UNIT_TEST_OBJ_DIR)$(1)ut_$(2)%.o \
+						 $(TEST_OBJ_DIR)$(1)ut_$(2)%.o \
 						 $(UNIT_TESTS_ASSET_OBJS) \
-						 $(filter %$(2).o,$(UNIT_TESTED_OBJS)) \
+						 $(filter %$(2).o,$(TESTED_OBJS)) \
 						 $(UNIT_TESTS_MOCKS_OBJS) \
-						 $(UNIT_TEST_OBJ_DIR)/unity.o \
-						 $(UNIT_TEST_OBJ_DIR)/cmock.o
+						 $(TEST_OBJ_DIR)/unity.o \
+						 $(TEST_OBJ_DIR)/cmock.o
 	@$(MKDIR) $$(dir $$@)
 	$(V)$(HOST_CC) $(UNIT_TEST_LDFLAGS) $$^ -o $$@
 endef
-MODULE_TO_TEST:=$(basename $(notdir $(UNIT_TESTED_OBJS)))
-REL_PATH_TO_MODULE:=$(subst $(UNIT_TEST_BIN_DIR),,$(dir $(UNIT_TESTS_BIN)))
-$(foreach rel_path,$(REL_PATH_TO_MODULE),\
-	$(foreach module,$(MODULE_TO_TEST),\
+UNIT_MODULE_TO_TEST:=$(basename $(notdir $(TESTED_OBJS)))
+UNIT_REL_PATH_TO_MODULE:=$(subst $(UNIT_TEST_BIN_DIR),,$(dir $(UNIT_TESTS_BIN)))
+$(foreach rel_path,$(UNIT_REL_PATH_TO_MODULE),\
+	$(foreach module,$(UNIT_MODULE_TO_TEST),\
 		$(eval $(call UNIT_TEST_generate,$(rel_path),$(module)))\
 	)\
 )
@@ -258,8 +297,54 @@ $(UNIT_TEST_MOCK_DIR)/%.o: $(UNIT_TEST_MOCK_DIR)/%.c $(UNIT_TEST_MOCK_DIR)/%.h
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H): $(HDRS)
+	@$(MKDIR) $(dir $@)
 	$(V)$(RUBY) $(CMOCK_DIR)/lib/cmock.rb $^ -o$(SOURCE_DIR)/test.yml
 	@$(CP) -rf -T mocks $(UNIT_TEST_MOCK_DIR)
+	@$(RM) -rf --preserve-root mocks
+
+########################################################
+# Rules to build integration tests (it_<module_name>*.c)
+########################################################s
+$(INTEGRATION_TEST_RES_DIR)/%.testresults: $(INTEGRATION_TEST_BIN_DIR)/%
+	@$(MKDIR) $(dir $@)
+	-@$< > $@
+
+$(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.o: $(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
+
+$(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.c: $(INTEGRATION_TEST_SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
+
+$(TEST_OBJ_DIR)/%.o: $(INTEGRATION_TEST_SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
+
+define INTEGRATION_TEST_generate =
+$(INTEGRATION_TEST_BIN_DIR)$(1)it_%:$(INTEGRATION_TEST_RUNNER_DIR)$(1)it_%_Runner.o \
+						 $(TEST_OBJ_DIR)$(1)it_%.o \
+						 $(INTEGRATION_TESTS_ASSET_OBJS) \
+						 $(TESTED_OBJS) \
+						 $(INTEGRATION_TESTS_MOCKS_OBJS) \
+						 $(TEST_OBJ_DIR)/unity.o \
+						 $(TEST_OBJ_DIR)/cmock.o
+	@$(MKDIR) $$(dir $$@)
+	$(V)$(HOST_CC) $(INTEGRATION_TEST_LDFLAGS) $$^ -o $$@
+endef
+INTEGRATION_REL_PATH_TO_MODULE:=$(subst $(INTEGRATION_TEST_BIN_DIR),,$(dir $(INTEGRATION_TESTS_BIN)))
+$(foreach rel_path,$(INTEGRATION_REL_PATH_TO_MODULE),\
+	$(eval $(call INTEGRATION_TEST_generate,$(rel_path)))\
+)
+
+$(INTEGRATION_TEST_MOCK_DIR)/%.o: $(INTEGRATION_TEST_MOCK_DIR)/%.c $(INTEGRATION_TEST_MOCK_DIR)/%.h
+	@$(MKDIR) $(dir $@)
+	$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
+
+$(INTEGRATION_TESTS_MOCKS_C) $(INTEGRATION_TESTS_MOCKS_H): $(HDRS)
+	@$(MKDIR) $(dir $@)
+	$(V)$(RUBY) $(CMOCK_DIR)/lib/cmock.rb $^ -o$(SOURCE_DIR)/test.yml
+	@$(CP) -rf -T mocks $(INTEGRATION_TEST_MOCK_DIR)
 	@$(RM) -rf --preserve-root mocks
 
 ########################################################
@@ -268,13 +353,18 @@ $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H): $(HDRS)
 .PRECIOUS:  $(PRES) $(OBJS) $(DEPS) \
 			$(UNIT_TESTS_BIN) $(UNIT_TESTS_RUNNER) $(UNIT_TESTS_RUNNER_OBJS) \
 			$(UNIT_TESTS_ASSET_OBJS) $(UNIT_TESTS_SCENAR_OBJS) $(UNIT_TESTS_MOCKS_C) \
-			$(UNIT_TESTS_MOCKS_H) $(UNIT_TESTS_MOCKS_OBJS) $(UNIT_TESTED_OBJS)
+			$(UNIT_TESTS_MOCKS_H) $(UNIT_TESTS_MOCKS_OBJS) \
+			$(INTEGRATION_TESTS_BIN) $(INTEGRATION_TESTS_RUNNER) $(INTEGRATION_TESTS_RUNNER_OBJS) \
+			$(INTEGRATION_TESTS_ASSET_OBJS) $(INTEGRATION_TESTS_SCENAR_OBJS) $(INTEGRATION_TESTS_MOCKS_C) \
+			$(INTEGRATION_TESTS_MOCKS_H) $(INTEGRATION_TESTS_MOCKS_OBJS)\
+			 $(TESTED_OBJS)
 .PHONY: clean
 clean:
 	-$(V)$(RM) --preserve-root -rf $(BIN_DIR)/* \
 			   $(OBJ_DIR)/* $(PRE_DIR)/* $(DEP_DIR)/* $(DOC_DIR)/* \
-			   $(UNIT_TEST_BIN_DIR)/* $(UNIT_TEST_OBJ_DIR)/* $(UNIT_TEST_RUNNER_DIR)/* $(UNIT_TEST_MOCK_DIR)/* \
-			   $(UNIT_TEST_RES_DIR)/* $(UNIT_TEST_COV_DIR)/*
+			   $(UNIT_TEST_BIN_DIR)/* $(TEST_OBJ_DIR)/* $(UNIT_TEST_RUNNER_DIR)/* $(UNIT_TEST_MOCK_DIR)/* \
+			   $(UNIT_TEST_RES_DIR)/* $(TEST_COV_DIR)/* $(INTEGRATION_TEST_BUILD_DIR)/* $(INTEGRATION_TEST_BIN_DIR)/* \
+			   $(INTEGRATION_TEST_RUNNER_DIR)/* $(INTEGRATION_TEST_MOCK_DIR)/* $(INTEGRATION_TEST_RES_DIR)/*
 
 .PHONY: distclean
 distclean: clean
