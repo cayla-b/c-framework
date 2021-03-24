@@ -35,27 +35,34 @@ endif
 # Generation tools if not defined by conanbuildinfo.mak
 FIND           ?= find
 DOXYGEN        ?= doxygen
+RUBY           ?= ruby
+PYTHON         ?= python
 MKDIR          ?= mkdir -p
 ECHO           ?= echo
 HOST_LD        ?= ld
 HOST_AR        ?= ar
 HOST_CC        ?= gcc
+HOST_GCOV      ?= gcov
 TARGET_LD      ?= ld
 TARGET_AR      ?= ar
 TARGET_CC      ?= gcc
+TARGET_GCOV    ?= gcov
 RM             ?= rm --preserve-root -rf
 CP             ?= cp
 MV             ?= mv
 $(shell $(FIND) --version > /dev/null)
 $(shell $(DOXYGEN) --version > /dev/null)
+$(shell $(RUBY) --version > /dev/null)
 $(shell $(MKDIR) --version > /dev/null)
 $(shell $(ECHO) --version > /dev/null)
 $(shell $(HOST_LD) --version > /dev/null)
 $(shell $(HOST_AR) --version > /dev/null)
 $(shell $(HOST_CC) --version > /dev/null)
+$(shell $(HOST_GCOV) --version > /dev/null)
 $(shell $(TARGET_LD) --version > /dev/null)
 $(shell $(TARGET_AR) --version > /dev/null)
 $(shell $(TARGET_CC) --version > /dev/null)
+$(shell $(TARGET_GCOV) --version > /dev/null)
 $(shell $(RM) --version > /dev/null)
 $(shell $(CP) --version > /dev/null)
 
@@ -158,7 +165,8 @@ doc: $(SOURCE_DIR)/Doxyfile $(SRCS) $(HDRS)
 
 .PHONY: test
 test: $(UNIT_TESTS_RESULTS) $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA)
-	@ruby $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR)/
+	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR)/
+	@$(if $(filter 1,$(COVERAGE)),$(TARGET_GCOV) -n $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA) 2> /dev/null)
 
 ########################################################
 # Rules to build the target
@@ -201,7 +209,7 @@ $(UNIT_TEST_RUNNER_DIR)/%_Runner.o: $(UNIT_TEST_RUNNER_DIR)/%_Runner.c
 
 $(UNIT_TEST_RUNNER_DIR)/%_Runner.c: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	@ruby $(UNITY_DIR)/auto/generate_test_runner.rb $< $@
+	$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
 
 $(UNIT_TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
@@ -221,8 +229,7 @@ $(UNIT_TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
 
 $(UNIT_TESTS_GCNO) $(UNIT_TESTS_GCDA): $(UNIT_TESTED_OBJS) $(UNIT_TESTS_RESULTS)
 	@$(MKDIR) $(dir $@)
-	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcno,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
-	-@$(MV) -f -t $(UNIT_TEST_COV_DIR) $(patsubst $(UNIT_TEST_OBJ_DIR)/%.o,$(UNIT_TEST_OBJ_DIR)/%.gcda,$(UNIT_TESTED_OBJS)) 2> /dev/null | true
+	-@$(MV) -f $(patsubst $(UNIT_TEST_COV_DIR)/%,$(UNIT_TEST_OBJ_DIR)/%,$@) $@ 2> /dev/null | true
 
 ########################################################
 # Rules dedicated to build unitary test (ut_<module_name>*.c)
@@ -251,7 +258,7 @@ $(UNIT_TEST_MOCK_DIR)/%.o: $(UNIT_TEST_MOCK_DIR)/%.c $(UNIT_TEST_MOCK_DIR)/%.h
 	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TESTS_MOCKS_C) $(UNIT_TESTS_MOCKS_H): $(HDRS)
-	@ruby $(CMOCK_DIR)/lib/cmock.rb $^ -o$(SOURCE_DIR)/test.yml
+	$(V)$(RUBY) $(CMOCK_DIR)/lib/cmock.rb $^ -o$(SOURCE_DIR)/test.yml
 	@$(CP) -rf -T mocks $(UNIT_TEST_MOCK_DIR)
 	@$(RM) -rf --preserve-root mocks
 
@@ -307,11 +314,7 @@ tools_ver:
 	$(V)$(MAKE) --version
 	$(V)$(ECHO)
 	$(V)$(ECHO) "Python version"
-	$(V)python --version
+	$(V)$(PYTHON) --version
 	$(V)$(ECHO)
-	$(V)$(ECHO) "Compiler version"
-	$(V)$(CC) --version
-	$(V)$(ECHO) "Binutils version"
-	$(V)$(LD) --version
 
 -include $(DEPS)
