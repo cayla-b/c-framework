@@ -1,6 +1,9 @@
 # This repository ignored files
-config.mk
-config.h
+conan.lock
+conanbuildinfo.mak
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
 **build/
 
 # Created by https://www.toptal.com/developers/gitignore/api/c,python,code
