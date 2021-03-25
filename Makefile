@@ -199,8 +199,7 @@ doc: $(SOURCE_DIR)/Doxyfile $(SRCS) $(HDRS)
 
 .PHONY: test
 test: $(UNIT_TESTS_RESULTS) $(INTEGRATION_TESTS_RESULTS) $(TESTS_GCNO) $(TESTS_GCDA)
-	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(UNIT_TEST_RES_DIR)/
-	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(INTEGRATION_TEST_RES_DIR)/
+	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(TEST_BUILD_DIR)/
 	@$(if $(filter 1,$(COVERAGE)),$(TARGET_GCOV) -n $(TESTS_GCNO) $(TESTS_GCDA) 2> /dev/null)
 
 ########################################################
@@ -248,7 +247,7 @@ $(TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
 
 $(TESTS_GCNO) $(TESTS_GCDA): $(TESTED_OBJS) $(UNIT_TESTS_RESULTS) $(INTEGRATION_TESTS_RESULTS)
 	@$(MKDIR) $(dir $@)
-	-@$(MV) -f $(patsubst $(TEST_COV_DIR)/%,$(TEST_OBJ_DIR)/%,$@) $@ 2> /dev/null | true
+	@$(MV) -f $(patsubst $(TEST_COV_DIR)/%,$(TEST_OBJ_DIR)/%,$@) $@ 2> /dev/null || true
 
 $(TEST_MOCK_DIR)/%.o: $(TEST_MOCK_DIR)/%.c $(TEST_MOCK_DIR)/%.h
 	@$(MKDIR) $(dir $@)
@@ -265,19 +264,27 @@ $(TESTS_MOCKS_C) $(TESTS_MOCKS_H): $(HDRS)
 ########################################################
 $(UNIT_TEST_RES_DIR)/%.testresults: $(UNIT_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
-	-@$< > $@
+	-@if test -e $<; then \
+	$< > $@; \
+	else \
+	$(ECHO) $(patsubst $(UNIT_TEST_RES_DIR)/%.testresults,$(UNIT_TEST_SRC_DIR)/%.c,$@):1:test_compilation:INFO: Error at compile time > $@; \
+	$(ECHO) $(patsubst $(UNIT_TEST_RES_DIR)/%.testresults,$(UNIT_TEST_SRC_DIR)/%.c,$@):1:test_compilation:FAIL >> $@; \
+	$(ECHO) -n >> $@; \
+	$(ECHO) ----------------------- >> $@; \
+	$(ECHO) 1 Tests 1 Failures 0 Ignored >> $@; \
+	fi
 
 $(UNIT_TEST_RUNNER_DIR)/%_Runner.o: $(UNIT_TEST_RUNNER_DIR)/%_Runner.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
+	-$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 $(UNIT_TEST_RUNNER_DIR)/%_Runner.c: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
+	-$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
 
 $(TEST_OBJ_DIR)/%.o: $(UNIT_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
+	-$(V)$(HOST_CC) -c $(UNIT_TEST_CFLAGS) $< -o $@
 
 define UNIT_TEST_generate =
 $(UNIT_TEST_BIN_DIR)$(1)ut_$(2)%:$(UNIT_TEST_RUNNER_DIR)$(1)ut_$(2)%_Runner.o \
@@ -288,7 +295,7 @@ $(UNIT_TEST_BIN_DIR)$(1)ut_$(2)%:$(UNIT_TEST_RUNNER_DIR)$(1)ut_$(2)%_Runner.o \
 						 $(TEST_OBJ_DIR)/unity.o \
 						 $(TEST_OBJ_DIR)/cmock.o
 	@$(MKDIR) $$(dir $$@)
-	$(V)$(HOST_CC) $(UNIT_TEST_LDFLAGS) $$^ -o $$@
+	-$(V)$(HOST_CC) $(UNIT_TEST_LDFLAGS) $$^ -o $$@
 endef
 UNIT_MODULE_TO_TEST:=$(basename $(notdir $(TESTED_OBJS)))
 UNIT_REL_PATH_TO_MODULE:=$(subst $(UNIT_TEST_BIN_DIR),,$(dir $(UNIT_TESTS_BIN)))
@@ -303,19 +310,27 @@ $(foreach rel_path,$(UNIT_REL_PATH_TO_MODULE),\
 ########################################################s
 $(INTEGRATION_TEST_RES_DIR)/%.testresults: $(INTEGRATION_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
-	-@$< > $@
+	-@if test -e $<; then \
+	$< > $@; \
+	else \
+	$(ECHO) $(patsubst $(INTEGRATION_TEST_RES_DIR)/%.testresults,$(INTEGRATION_TEST_SRC_DIR)/%.c,$@):1:test_compilation:INFO: Error at compile time > $@; \
+	$(ECHO) $(patsubst $(INTEGRATION_TEST_RES_DIR)/%.testresults,$(INTEGRATION_TEST_SRC_DIR)/%.c,$@):1:test_compilation:FAIL >> $@; \
+	$(ECHO) -n >> $@; \
+	$(ECHO) ----------------------- >> $@; \
+	$(ECHO) 1 Tests 1 Failures 0 Ignored >> $@; \
+	fi
 
 $(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.o: $(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
+	-$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
 
 $(INTEGRATION_TEST_RUNNER_DIR)/%_Runner.c: $(INTEGRATION_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
+	-$(V)$(RUBY) $(UNITY_DIR)/auto/generate_test_runner.rb $(SOURCE_DIR)/test.yml $< $@
 
 $(TEST_OBJ_DIR)/%.o: $(INTEGRATION_TEST_SRC_DIR)/%.c
 	@$(MKDIR) $(dir $@)
-	$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
+	-$(V)$(HOST_CC) -c $(INTEGRATION_TEST_CFLAGS) $< -o $@
 
 define INTEGRATION_TEST_generate =
 $(INTEGRATION_TEST_BIN_DIR)$(1)it_%:$(INTEGRATION_TEST_RUNNER_DIR)$(1)it_%_Runner.o \
@@ -326,7 +341,7 @@ $(INTEGRATION_TEST_BIN_DIR)$(1)it_%:$(INTEGRATION_TEST_RUNNER_DIR)$(1)it_%_Runne
 						 $(TEST_OBJ_DIR)/unity.o \
 						 $(TEST_OBJ_DIR)/cmock.o
 	@$(MKDIR) $$(dir $$@)
-	$(V)$(HOST_CC) $(INTEGRATION_TEST_LDFLAGS) $$^ -o $$@
+	-$(V)$(HOST_CC) $(INTEGRATION_TEST_LDFLAGS) $$^ -o $$@
 endef
 INTEGRATION_REL_PATH_TO_MODULE:=$(subst $(INTEGRATION_TEST_BIN_DIR),,$(dir $(INTEGRATION_TESTS_BIN)))
 $(foreach rel_path,$(INTEGRATION_REL_PATH_TO_MODULE),\
