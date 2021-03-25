@@ -1,0 +1,9 @@
+:cmock:
+  :plugins:
+    - :ignore_arg
+    - :expect_any_args
+    - :array
+    - :callback
+    - :return_thru_ptr
+  :treat_externs: :include
+  :weak: '__attribute__((__weak__))'
