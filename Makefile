@@ -260,8 +260,12 @@ $(TESTS_MOCKS_C) $(TESTS_MOCKS_H): $(HDRS)
 	@$(RM) -rf --preserve-root mocks
 
 ########################################################
-# Rules to build unit tests (ut_<module_name>*.c)
+# Rules to build unit tests (ut_<module_name><test id>.c)
 ########################################################
+$(subst $(UNIT_TEST_BIN_DIR)/,,$(UNIT_TESTS_BIN)):
+	@$(MAKE) $(filter %$@.testresults, $(UNIT_TESTS_RESULTS))
+	@cat $(filter %$@.testresults, $(UNIT_TESTS_RESULTS))
+
 $(UNIT_TEST_RES_DIR)/%.testresults: $(UNIT_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
 	-@if test -e $<; then \
@@ -306,8 +310,12 @@ $(foreach rel_path,$(UNIT_REL_PATH_TO_MODULE),\
 )
 
 ########################################################
-# Rules to build integration tests (it_<module_name>*.c)
-########################################################s
+# Rules to build integration tests (it_<test id>.c)
+########################################################
+$(subst $(INTEGRATION_TEST_BIN_DIR)/,,$(INTEGRATION_TESTS_BIN)):
+	@$(MAKE) $(filter %$@.testresults, $(INTEGRATION_TESTS_RESULTS))
+	@cat $(filter %$@.testresults, $(INTEGRATION_TESTS_RESULTS))
+
 $(INTEGRATION_TEST_RES_DIR)/%.testresults: $(INTEGRATION_TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
 	-@if test -e $<; then \
