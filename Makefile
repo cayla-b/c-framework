@@ -205,9 +205,9 @@ test: $(UNIT_TESTS_RESULTS) $(INTEGRATION_TESTS_RESULTS) $(TESTS_GCNO) $(TESTS_G
 ########################################################
 # Rules to build the target
 ########################################################
-$(BIN_DIR): $(BIN_DIR)/$(TARGET) $(BIN_DIR)/lib$(TARGET).a
+$(BIN_DIR): $(BIN_DIR)/$(TARGET)
 
-$(BIN_DIR)/%: $(OBJS)
+$(BIN_DIR)/%: $(BIN_DIR)/lib%.a
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) LD $(notdir $@)
 	$(V)$(TARGET_CC) $(LDFLAGS) $^ -o $@ -Wl,-Map=$(@:=.map)
@@ -359,7 +359,7 @@ $(foreach rel_path,$(INTEGRATION_REL_PATH_TO_MODULE),\
 ########################################################
 # PHONY clean rules
 ########################################################
-.PRECIOUS:  $(PRES) $(OBJS) $(DEPS) \
+.PRECIOUS:  $(PRES) $(OBJS) $(DEPS) $(BIN_DIR)/$(TARGET) $(BIN_DIR)/lib$(TARGET).a \
 			$(UNIT_TESTS_BIN) $(UNIT_TESTS_RUNNER) $(UNIT_TESTS_RUNNER_OBJS) \
 			$(UNIT_TESTS_ASSET_OBJS) $(UNIT_TESTS_SCENAR_OBJS) \
 			$(INTEGRATION_TESTS_BIN) $(INTEGRATION_TESTS_RUNNER) $(INTEGRATION_TESTS_RUNNER_OBJS) \
