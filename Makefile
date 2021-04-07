@@ -5,6 +5,9 @@
 # Options:                                             #
 #  - ROOTDIR: The directory containing this makefile   #
 #  - BUILDDIR: The directory where files are generated #
+#  - VERBOSE: Equal to 1 if verbose output required    #
+#  - COVERAGE: Equal to 1 if coverage required during  #
+#    tests                                             #
 ########################################################
 # resolving external environment - SOURCE_DIR
 ROOT_DIR ?= .
@@ -386,7 +389,7 @@ help:
 	$(V)$(ECHO)
 	$(V)$(ECHO) "=== Available rules ============================================================"
 	$(V)$(ECHO) "        all       : Build the entire package"
-	$(V)$(ECHO) "        bin       : Build only the binary artifact $(TARGETNAME)"
+	$(V)$(ECHO) "        build     : Build only the binary artifact $(TARGETNAME)"
 	$(V)$(ECHO) "        test      : Pass the entire test campaign"
 	$(V)$(ECHO) "        clean     : Remove all make generated artifact"
 	$(V)$(ECHO) "        distclean : Remove all generated files (e.g. pre-make files)"
