@@ -124,7 +124,7 @@ all: $(TESTED_OBJS) $(TESTS_RESULTS)
 	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --json $(call convert_func,$(TEST_COV_DIR)/report.json) --json-pretty
 	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --json-summary $(call convert_func,$(TEST_COV_DIR)/report-summary.json) --json-summary-pretty
 	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --coveralls $(call convert_func,$(TEST_COV_DIR)/report.coveralls) --coveralls-pretty
-	-$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(TEST_RES_DIR)/ $(ROOTDIR)/
+	$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(TEST_RES_DIR)/ $(ROOTDIR)/
 	-$(V)gcovr -s -r $(call convert_func,$(ROOTDIR))
 
 $(TEST_OBJ_DIR)/lib2test.a: $(TESTED_OBJS)

@@ -60,7 +60,7 @@ CFLAGS += -Wall
 # Build linker flags
 LDFLAGS  = $(addprefix -L,$(patsubst %/,%,$(CONAN_LIB_DIRS)))
 LDFLAGS += -Wl,-\( $(addprefix -l,$(CONAN_LIBS)) -Wl,-\)
-TARGET  ?= myProject
+TARGET  ?= libmyProject.a
 
 ########################################################
 # PHONY build rules
