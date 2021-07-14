@@ -200,8 +200,16 @@ $(TEST_BIN_DIR)/%: $(TEST_OBJ_DIR)/unity.o $(TEST_OBJ_DIR)/cmock.o $(TEST_RUNNER
 
 $(TEST_RES_DIR)/%.testresults: $(TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
-	@$(ECHO) Execute $(notdir $<)
-	-$(V)$(TIMEOUT) $(TIMEOUT_IN_TIME) $< > $@
+	@$(ECHO) Execute $(notdir $<) with timeout=$(TIMEOUT_IN_TIME)
+	-$(V)$(TIMEOUT) $(TIMEOUT_IN_TIME) $< > $@; \
+	if test $$? -eq 124; then \
+		$(ECHO) $<:0:test_timeout:FAIL > $@ ; \
+		$(ECHO) >> $@ ; \
+		$(ECHO) ----------------------- >> $@ ; \
+		$(ECHO) 1 Tests 1 Failures 0 Ignored >> $@ ; \
+		$(ECHO) FAIL >> $@ ; \
+		$(ECHO) >> $@ ; \
+	fi
 
 ########################################################
 # PHONY clean rules
