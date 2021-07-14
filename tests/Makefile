@@ -20,8 +20,10 @@
 # Resolving external environment - ROOTDIR - PWD by default
 ifeq ($(shell uname -o), Cygwin)
 ROOTDIR ?= $(shell cygpath -m $(abspath ..))
+convert_func = $(shell cygpath -u $(1))
 else
 ROOTDIR ?= $(abspath ..)
+convert_func = $(1)
 endif
 
 # Resolving external environment - BUILDDIR - PWD/build by default
@@ -95,9 +97,9 @@ TESTED_OBJS  += $(patsubst $(SRC_DIR)/%.S,$(TEST_OBJSRC_DIR)/%.o,$(filter %.S,$(
 MOCKED_OBJS   = $(patsubst %.h,$(TEST_MOCK_DIR)/mock_%.o,$(notdir $(HDRS)))
 MOCKED_SRCS   = $(patsubst %.o,%.c,$(MOCKED_OBJS))
 MOCKED_HDRS   = $(patsubst %.o,%.h,$(MOCKED_OBJS))
-TESTS_RESULTS = $(patsubst $(TEST_SRC_DIR)/%.c,$(TEST_RES_DIR)/%.testresult,$(SCENARII_SRCS))
-TESTS_BINS    = $(patsubst $(TEST_RES_DIR)/%.testresult,$(TEST_BIN_DIR)/%,$(TESTS_RESULTS))
-TESTS_RUNNER  = $(patsubst $(TEST_RES_DIR)/%.testresult,$(TEST_RUNNER_DIR)/%_runner.c,$(TESTS_RESULTS))
+TESTS_RESULTS = $(patsubst $(TEST_SRC_DIR)/%.c,$(TEST_RES_DIR)/%.testresults,$(SCENARII_SRCS))
+TESTS_BINS    = $(patsubst $(TEST_RES_DIR)/%.testresults,$(TEST_BIN_DIR)/%,$(TESTS_RESULTS))
+TESTS_RUNNER  = $(patsubst $(TEST_RES_DIR)/%.testresults,$(TEST_RUNNER_DIR)/%_runner.c,$(TESTS_RESULTS))
 TESTS_RUNNER_OBJS = $(patsubst $(TEST_RUNNER_DIR)/%_runner.c,$(TEST_RUNNER_DIR)/%_runner.o,$(TESTS_RUNNER))
 
 # Build preprocessor/compiler/assembler flags
@@ -114,7 +116,16 @@ LDFLAGS += -Wl,-\( $(addprefix -l,$(CONAN_LIBS)) -Wl,-\)
 # PHONY build rules
 ########################################################
 .PHONY: all
-all: $(TESTS_RESULTS)
+all: $(TESTED_OBJS) $(TESTS_RESULTS)
+	@$(MKDIR) $(TEST_COV_DIR)
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --html-details $(call convert_func,$(TEST_COV_DIR)/report.html) --html-self-contained
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --xml $(call convert_func,$(TEST_COV_DIR)/report.xml) --xml-pretty
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --sonarqube $(call convert_func,$(TEST_COV_DIR)/report.sonar)
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --json $(call convert_func,$(TEST_COV_DIR)/report.json) --json-pretty
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --json-summary $(call convert_func,$(TEST_COV_DIR)/report-summary.json) --json-summary-pretty
+	-$(V)gcovr -r $(call convert_func,$(ROOTDIR)) --coveralls $(call convert_func,$(TEST_COV_DIR)/report.coveralls) --coveralls-pretty
+	-$(V)$(RUBY) $(UNITY_DIR)/auto/unity_test_summary.rb $(TEST_RES_DIR)/ $(ROOTDIR)/
+	-$(V)gcovr -s -r $(call convert_func,$(ROOTDIR))
 
 $(TEST_OBJ_DIR)/lib2test.a: $(TESTED_OBJS)
 	@$(MKDIR) $(dir $@)
@@ -124,7 +135,7 @@ $(TEST_OBJ_DIR)/lib2test.a: $(TESTED_OBJS)
 $(TEST_OBJSRC_DIR)/%.o: $(SRC_DIR)/%.c $(PRE_DIR)/%.i $(DEP_DIR)/%.d
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) CC $(notdir $@)
-	$(V)$(HOST_CC) -c $(CFLAGS) $(COVERAGE_CFLAGS) $< -o $@
+	$(V)$(HOST_CC) -c $(CFLAGS) $(COVERAGE_CFLAGS) $(call convert_func,$<) -o $(call convert_func,$@)
 
 $(TEST_OBJSRC_DIR)/%.o: $(SRC_DIR)/%.s
 	@$(MKDIR) $(dir $@)
@@ -187,9 +198,10 @@ $(TEST_BIN_DIR)/%: $(TEST_OBJ_DIR)/unity.o $(TEST_OBJ_DIR)/cmock.o $(TEST_RUNNER
 	@$(ECHO) LD $(notdir $@)
 	$(V)$(TARGET_CC) $(LDFLAGS) $(COVERAGE_LFLAGS) $^ -o $@
 
-$(TEST_RES_DIR)/%.testresult: $(TEST_BIN_DIR)/%
+$(TEST_RES_DIR)/%.testresults: $(TEST_BIN_DIR)/%
 	@$(MKDIR) $(dir $@)
-	-@$(TIMEOUT) $(TIMEOUT_IN_TIME) $< > $@
+	@$(ECHO) Execute $(notdir $<)
+	-$(V)$(TIMEOUT) $(TIMEOUT_IN_TIME) $< > $@
 
 ########################################################
 # PHONY clean rules
