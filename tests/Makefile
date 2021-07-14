@@ -43,15 +43,19 @@ endif
 COVERAGE ?= Statement
 ifeq ($(COVERAGE),None)
 COVERAGE_CFLAGS=
+COVERAGE_LFLAGS=
 else
 ifeq ($(COVERAGE),Statement)
 COVERAGE_CFLAGS=-fprofile-arcs -ftest-coverage -fprofile-generate
+COVERAGE_LFLAGS=-fprofile-arcs -ftest-coverage
 else
 ifeq ($(COVERAGE),Decisions)
 COVERAGE_CFLAGS=-fprofile-arcs -ftest-coverage -fprofile-generate
+COVERAGE_LFLAGS=-fprofile-arcs -ftest-coverage
 else
 ifeq ($(COVERAGE),MC_DC)
 COVERAGE_CFLAGS=
+COVERAGE_LFLAGS=
 $(error $(COVERAGE) coverage not yet handled !)
 else
 $(error Unknown coverage $(COVERAGE) please select one of the following [None,Statement,Decisions,MC_DC] !)
@@ -60,6 +64,7 @@ endif
 endif
 endif
 
+TIMEOUT_IN_TIME=60s
 export UNITY_DIR ?= $(TOOLS_DIR)/cmock/vendor/unity
 export CMOCK_DIR ?= $(TOOLS_DIR)/cmock
 
@@ -73,22 +78,27 @@ include  $(ROOTDIR)/tools.mak
 -include $(BUILDDIR)/tests.mak
 SRCS         ?= $(shell $(FIND) $(SRC_DIR) -name "*.c" -o -name "*.s" -o -name "*.S")
 HDRS         ?= $(shell $(FIND) $(SRC_DIR) $(CONAN_INCLUDE_DIRS) -name "*.h")
-UNITEST_SRCS ?= $(shell $(FIND) $(UNIT_TEST_SRC_DIR) -name "*.c")
-UNITEST_HDRS ?= $(shell $(FIND) $(UNIT_TEST_SRC_DIR) -name "*.h")
-INTTEST_SRCS ?= $(shell $(FIND) $(INTEGRATION_TEST_SRC_DIR) -name "*.c")
-INTTEST_HDRS ?= $(shell $(FIND) $(INTEGRATION_TEST_SRC_DIR) -name "*.h")
+SCENARII_SRCS = $(shell $(FIND) $(TEST_SRC_DIR) -name "test_*.c")
+SCENARII_OBJS = $(patsubst $(TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(SCENARII_SRCS))
+ASSETS_SRCS   = $(filter-out $(SCENARII_SRCS),$(shell $(FIND) $(TEST_SRC_DIR) -name "*.c"))
+ASSETS_OBJS   = $(patsubst $(TEST_SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(ASSETS_SRCS))
+SCENARII_MKS  = $(shell $(FIND) $(TEST_SRC_DIR) -name "*.mak")
 
 # Temporary build files
 PRES          = $(patsubst $(SRC_DIR)/%.c,$(PRE_DIR)/%.i,$(filter %.c,$(SRCS)))
 PRES         += $(patsubst $(SRC_DIR)/%.S,$(PRE_DIR)/%.i,$(filter %.S,$(SRCS)))
 DEPS          = $(patsubst $(SRC_DIR)/%.c,$(DEP_DIR)/%.d,$(filter %.c,$(SRCS)))
 DEPS         += $(patsubst $(SRC_DIR)/%.S,$(DEP_DIR)/%.d,$(filter %.S,$(SRCS)))
-TESTED_OBJS   = $(patsubst $(SRC_DIR)/%.c,$(TEST_OBJ_DIR)/%.o,$(filter %.c,$(SRCS)))
-TESTED_OBJS  += $(patsubst $(SRC_DIR)/%.s,$(TEST_OBJ_DIR)/%.o,$(filter %.s,$(SRCS)))
-TESTED_OBJS  += $(patsubst $(SRC_DIR)/%.S,$(TEST_OBJ_DIR)/%.o,$(filter %.S,$(SRCS)))
+TESTED_OBJS   = $(patsubst $(SRC_DIR)/%.c,$(TEST_OBJSRC_DIR)/%.o,$(filter %.c,$(SRCS)))
+TESTED_OBJS  += $(patsubst $(SRC_DIR)/%.s,$(TEST_OBJSRC_DIR)/%.o,$(filter %.s,$(SRCS)))
+TESTED_OBJS  += $(patsubst $(SRC_DIR)/%.S,$(TEST_OBJSRC_DIR)/%.o,$(filter %.S,$(SRCS)))
 MOCKED_OBJS   = $(patsubst %.h,$(TEST_MOCK_DIR)/mock_%.o,$(notdir $(HDRS)))
 MOCKED_SRCS   = $(patsubst %.o,%.c,$(MOCKED_OBJS))
 MOCKED_HDRS   = $(patsubst %.o,%.h,$(MOCKED_OBJS))
+TESTS_RESULTS = $(patsubst $(TEST_SRC_DIR)/%.c,$(TEST_RES_DIR)/%.testresult,$(SCENARII_SRCS))
+TESTS_BINS    = $(patsubst $(TEST_RES_DIR)/%.testresult,$(TEST_BIN_DIR)/%,$(TESTS_RESULTS))
+TESTS_RUNNER  = $(patsubst $(TEST_RES_DIR)/%.testresult,$(TEST_RUNNER_DIR)/%_runner.c,$(TESTS_RESULTS))
+TESTS_RUNNER_OBJS = $(patsubst $(TEST_RUNNER_DIR)/%_runner.c,$(TEST_RUNNER_DIR)/%_runner.o,$(TESTS_RUNNER))
 
 # Build preprocessor/compiler/assembler flags
 CFLAGS  = $(CONAN_CFLAGS)
@@ -104,26 +114,24 @@ LDFLAGS += -Wl,-\( $(addprefix -l,$(CONAN_LIBS)) -Wl,-\)
 # PHONY build rules
 ########################################################
 .PHONY: all
-all: $(TEST_OBJ_DIR)/lib2test.a $(MOCKED_OBJS)
-	$(V)$(MAKE) -C $(UNIT_TEST_SRC_DIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) VERBOSE=$(VERBOSE) COVERAGE=$(COVERAGE) all
-	$(V)$(MAKE) -C $(INTEGRATION_TEST_SRC_DIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) VERBOSE=$(VERBOSE) COVERAGE=$(COVERAGE) all
+all: $(TESTS_RESULTS)
 
 $(TEST_OBJ_DIR)/lib2test.a: $(TESTED_OBJS)
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) AR $(notdir $@)
 	$(V)$(HOST_AR) r $@ $^
 
-$(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(PRE_DIR)/%.i $(DEP_DIR)/%.d
+$(TEST_OBJSRC_DIR)/%.o: $(SRC_DIR)/%.c $(PRE_DIR)/%.i $(DEP_DIR)/%.d
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) CC $(notdir $@)
 	$(V)$(HOST_CC) -c $(CFLAGS) $(COVERAGE_CFLAGS) $< -o $@
 
-$(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.s
+$(TEST_OBJSRC_DIR)/%.o: $(SRC_DIR)/%.s
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) AS $(notdir $@)
 	$(V)$(HOST_CC) -c $(CFLAGS) $< -o $@
 
-$(TEST_OBJ_DIR)/%.o: $(SRC_DIR)/%.S $(PRE_DIR)/%.i $(DEP_DIR)/%.d
+$(TEST_OBJSRC_DIR)/%.o: $(SRC_DIR)/%.S $(PRE_DIR)/%.i $(DEP_DIR)/%.d
 	@$(MKDIR) $(dir $@)
 	@$(ECHO) AS $(notdir $@)
 	$(V)$(HOST_CC) -c $(CFLAGS) $< -o $@
@@ -148,16 +156,49 @@ $(TEST_MOCK_DIR)/%.o: $(HDRS)
 	@$(MKDIR) $(dir $@)
 	$(V)MOCK_OUT=$(TEST_MOCK_DIR) $(RUBY) $(CMOCK_DIR)/scripts/create_mock.rb $(filter %$(patsubst mock_%.o,%.h,$(notdir $@)),$^)
 	@$(ECHO) CC $(notdir $@)
-	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src -I$(TEST_MOCK_DIR) $< -o $@
+	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src -I$(TEST_MOCK_DIR) $(patsubst %.o,%.c,$@) -o $@
+
+$(TEST_RUNNER_DIR)/%_runner.c: $(TEST_SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	$(V)$(RUBY) $(CMOCK_DIR)/scripts/create_runner.rb $< $@
+
+$(TEST_RUNNER_DIR)/%.o: $(TEST_RUNNER_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	@$(ECHO) CC $(notdir $@)
+	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src $< -o $@
+
+$(TEST_OBJ_DIR)/%.o: $(TEST_SRC_DIR)/%.c
+	@$(MKDIR) $(dir $@)
+	@$(ECHO) CC $(notdir $@)
+	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src $< -o $@
+
+$(TEST_OBJ_DIR)/unity.o: $(UNITY_DIR)/src/unity.c
+	@$(MKDIR) $(dir $@)
+	@$(ECHO) CC $(notdir $@)
+	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src $< -o $@
+
+$(TEST_OBJ_DIR)/cmock.o: $(CMOCK_DIR)/src/cmock.c
+	@$(MKDIR) $(dir $@)
+	@$(ECHO) CC $(notdir $@)
+	$(V)$(HOST_CC) -c $(CFLAGS) -I$(UNITY_DIR)/src -I$(CMOCK_DIR)/src $< -o $@
+
+$(TEST_BIN_DIR)/%: $(TEST_OBJ_DIR)/unity.o $(TEST_OBJ_DIR)/cmock.o $(TEST_RUNNER_DIR)/%_runner.o $(TEST_OBJ_DIR)/%.o
+	@$(MKDIR) $(dir $@)
+	@$(ECHO) LD $(notdir $@)
+	$(V)$(TARGET_CC) $(LDFLAGS) $(COVERAGE_LFLAGS) $^ -o $@
+
+$(TEST_RES_DIR)/%.testresult: $(TEST_BIN_DIR)/%
+	@$(MKDIR) $(dir $@)
+	-@$(TIMEOUT) $(TIMEOUT_IN_TIME) $< > $@
 
 ########################################################
 # PHONY clean rules
 ########################################################
-.PRECIOUS: $(TEST_OBJ_DIR)/lib2test.a $(TESTED_OBJS) $(MOCKED_OBJS) $(MOCKED_SRCS) $(MOCKED_HDRS) $(PRES) $(DEPS)
+.PRECIOUS: $(TEST_OBJ_DIR)/lib2test.a $(TESTED_OBJS) $(MOCKED_OBJS) $(MOCKED_SRCS) $(MOCKED_HDRS) $(PRES) $(DEPS) $(TESTS_RESULTS) $(TESTS_BINS) $(TESTS_RUNNER) \
+		   $(ASSETS_OBJS) $(SCENARII_OBJS) $(TESTS_RUNNER_OBJS)
 .PHONY: clean
 clean:
-	-$(V)$(RM) --preserve-root -rf $(TEST_OBJ_DIR)/* $(TEST_MOCK_DIR)/*
-	$(V)$(MAKE) -C $(UNIT_TEST_SRC_DIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) VERBOSE=$(VERBOSE) COVERAGE=$(COVERAGE) clean
-	$(V)$(MAKE) -C $(INTEGRATION_TEST_SRC_DIR) ROOTDIR=$(ROOTDIR) BUILDDIR=$(BUILDDIR) VERBOSE=$(VERBOSE) COVERAGE=$(COVERAGE) clean
+	-$(V)$(RM) --preserve-root -rf $(TEST_BUILDDIR)/*
 
 -include $(DEPS)
+-include $(SCENARII_MKS)

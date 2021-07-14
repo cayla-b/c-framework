@@ -17,8 +17,6 @@ use an already existing framework and stick to it.
 - /build/pre                  : Where intermediate pre-processed files are generated (for possible static analysis)
 - **/src                        : Source directory where all source must be stored** Here is what you search for !!!
 - **/tests                      : Overall test directory** Here is where the important stuff is !!!
-- **/tests/unit                 : Unit test scenarii shall be name ut_<tested C file name>_<id>.c** (all others files are considered assets)
-- **/tests/integration          : Integration test scenarii shall be name it_<id>.c** (all others files are considered assets)
 - /tools                      : Tools directory
 - /tools/cmock                : Tested framework
 - /LICENSE                    : The license file for this repository
@@ -34,11 +32,12 @@ To add a new source simply add .c, .s, .S or .h files in src folder.
 
 ### New test rolder
 
-To create a new test, it depends on which kind of test is required:
- - Unit test: test 1 source file that whose test scenario shall be named ut_<code(c,s,S) filename>_<id>.c
-   - Unit test assets
- - Integration test: test overall source of this folder with its correct dependancy scenario shall be named it_<id>.c
-   - Integration test assets
+To create a new test, simply add a file test_*.c under tests folder.
+To create a test assets, simply add a .c file under tests folder (not starting with test_).
+To add an object file to a given test create a file .mak under tests folder:
+  - Rule target must be $(TEST_BIN_DIR)/<relative path of test_*.c folder under tests>/test_*
+  - Rule dependencies must be $(TEST_OBJSRC_DIR)/<relative path of *.c folder under src>/*.o (object to test)
+  - Rule dependencies must be $(TEST_MOCK_DIR)/mock_<module name>.o (mock)
 
 ### Configuration files
 
